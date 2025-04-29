@@ -1,0 +1,5 @@
+flask
+whisper
+pronouncing
+eng-to-ipa
+gunicorn
