@@ -1,5 +1,6 @@
 flask
-whisper
+openai-whisper
 pronouncing
 eng-to-ipa
 gunicorn
+python-Levenshtein
