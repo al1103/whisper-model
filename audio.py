@@ -54,19 +54,27 @@ def fast_levenshtein_distance(s1, s2):
 
 def calculate_pronunciation_score_optimized(reference_ipa, spoken_ipa):
     """Optimized pronunciation accuracy score calculation"""
-    if not reference_ipa or not spoken_ipa:
+    # Handle empty inputs
+    if not reference_ipa or not spoken_ipa or spoken_ipa.isspace():
+        return 0
+
+    # Clean and normalize inputs
+    ref_clean = reference_ipa.strip().lower()
+    spoken_clean = spoken_ipa.strip().lower()
+
+    if not ref_clean or not spoken_clean:
         return 0
 
     # Quick exact match check
-    if reference_ipa.lower() == spoken_ipa.lower():
+    if ref_clean == spoken_clean:
         return 100
 
     # Use optimized distance calculation
-    distance = fast_levenshtein_distance(reference_ipa.lower(), spoken_ipa.lower())
-    max_length = max(len(reference_ipa), len(spoken_ipa))
+    distance = fast_levenshtein_distance(ref_clean, spoken_clean)
+    max_length = max(len(ref_clean), len(spoken_clean))
 
     if max_length == 0:
-        return 100
+        return 0  # Changed from 100 to 0 for empty strings
 
     similarity = (1 - distance / max_length) * 100
     return round(max(0, similarity), 2)
@@ -200,6 +208,23 @@ def compare_pronunciation():
         )
         spoken_text = result.get("text", "").strip()
 
+        # Check if transcription is empty
+        if not spoken_text:
+            return jsonify({
+                "reference_text": reference_text,
+                "spoken_text": "",
+                "reference_ipa": " ".join([get_word_ipa(word) for word in reference_text.split()]),
+                "spoken_ipa": "",
+                "overall_score": 0,
+                "accuracy_level": "No speech detected",
+                "word_analysis": [{
+                    "reference": get_word_ipa(word),
+                    "spoken": "[no speech]",
+                    "score": 0,
+                    "status": "missing"
+                } for word in reference_text.split()]
+            }), 200
+
         # Parallel IPA processing
         reference_words = reference_text.split()
         spoken_words = spoken_text.split()
@@ -252,6 +277,7 @@ def compare_pronunciation():
                 })
 
     except Exception as e:
+        print(f"Error in comparison: {str(e)}")  # Add logging
         return jsonify({"error": str(e)}), 500
     finally:
         if os.path.exists(file_path):
@@ -263,7 +289,12 @@ def compare_pronunciation():
         "reference_ipa": reference_full_ipa,
         "spoken_ipa": spoken_full_ipa,
         "overall_score": overall_score,
-        "accuracy_level": "Excellent" if overall_score >= 90 else "Good" if overall_score >= 75 else "Fair" if overall_score >= 60 else "Needs Improvement",
+        "accuracy_level": (
+            "Excellent" if overall_score >= 90
+            else "Good" if overall_score >= 75
+            else "Fair" if overall_score >= 60
+            else "Needs Improvement"
+        ),
         "word_analysis": word_analysis
     })
 
